@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Star Battle</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <style>
+    @import url('https://fonts.googleapis.com/css?family=Poppins');
+    *{
+        margin: 0;
+        padding: 0;
+    }
+    body {
+        font-family: 'Poppins', sans-serif; 
+    }
+    .parallax {
+        --ship-width: 80px;
+        position: fixed;
+        cursor: none;
+        width: 100%;
+        height: 100%;
+        background: url('assets/bg.jpg');
+        background-position: 0px;
+        background-size: cover;
+        transition: 650s linear;
+    }
+    .planet {
+        position: absolute;
+        animation-name: movePlanet;
+        animation-timing-function: linear;
+        right: -300px;
+    }
+    .bullet {
+        width: 25px;
+        position: absolute;
+        top: -50px;
+        z-index: 5;
+        left: -20px;
+        animation-name:upBullet;
+        animation-duration: 3s;
+        animation-timing-function: linear;
+    }
+    .enemy-bullet {
+        animation-name: downBullet;
+        transform: rotate(180deg)
+    }
+    .spaceship {
+        z-index: 6;
+        position: absolute;
+        width: var(--ship-width);
+        top: 250px;
+        cursor: none;
+        left: 350px;
+        transition: 0.2s linear;
+    }
+    .main {
+        top: calc(100vh - var(--ship-width) - 50px);
+        left: calc(50vw - (var(--ship-width) / 2));
+    }
+    .enemy {
+        top: -100px;
+        transform: rotate(180deg);
+        animation-timing-function: linear;
+        animation-name: downBullet;
+    }
+    .size-5 {
+        z-index: 5;
+        animation-duration: 12s;
+        width: 210px;
+    }
+    .size-4 {
+        z-index: 4;
+        animation-duration: 22s;
+        width: 150px;
+    }
+    .size-3 {
+        z-index: 3;
+        animation-duration: 36s;
+        width: 100px;
+    }
+    .size-2 {
+        z-index: 2;
+        animation-duration: 56s;
+        width: 58px;
+    }
+    .size-1 {
+        animation-duration: 128s;
+        width: 18px;
+    }
+    .explosion {
+        z-index: 15;
+        position: absolute;
+        width: 80px;
+    }
+    .destroyed {
+        animation-name: destroyShip;
+        animation-duration: 1s;
+        opacity: 0;
+    }
+    .fuel {
+        display: flex;
+        align-items: center;
+    }
+    .icon {
+        margin-right: 5px;
+        font-size: 20px;
+    }
+    .counter {
+        width: 60px;
+        display: inline-block;
+        height: 13px;
+        border: 1px solid red;
+        position: relative;
+    }
+    .counter div {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        background: green;
+    }
+    .scores {
+        box-sizing: border-box;
+        width: 105px;
+        padding: 12px;
+        position: absolute;
+        z-index: 100;
+        top: 0;
+        opacity: .7;
+        right: 0;
+        border-bottom-left-radius: 4px;
+        background: #fff;
+    }
+    #points:after {
+        content: ' pts.'
+    }
+    #seconds:after {
+        content: ' m.'
+    }
+    @media screen and (max-width: 700px) {
+        .scores {
+            top: 0;
+            width: 100%;
+            border-radius: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 15px;
+        }
+    }
+    /* @media (orientation:portrait) {
+        .parallax {
+            height: 100vh !important;
+            width: 100vw !important;
+        }
+    }
+    @media (orientation:landscape) {
+        .parallax {
+            height: 100vh !important;
+            width: 100vw !important;
+        }
+    } */
+    @keyframes movePlanet{
+        from {
+            transform: translatex(0);
+        } to {
+            transform: translateX(-140vw);
+        }
+    }
+    @keyframes upBullet {
+        to {
+            top: -10vh;
+        }
+    }
+    @keyframes downBullet {
+        to {
+            top: 110vh;
+        }
+    }
+    @keyframes destroyShip {
+        from {
+            transform: rotate(0) translateY(0);
+            opacity: 1;
+        }
+        to {
+            opacity: 0;
+            transform: rotate(200deg) translateY(-55px);
+        }
+    }
+    </style>
+</head>
+<body>
+   <div class="parallax">
+       <div class="scores">
+           <div class="points">
+               <span class="icon">&#127942;</span> <span id="points"></span>
+           </div>
+           <div class="time">
+                <span class="icon">&#128336;</span>
+                <span id="minutes"></span>:<span id="seconds"></span>
+           </div>
+           <div class="fuel">
+               <span class="icon">&#9981;</span>
+               <div class="counter">
+                   <div id="fuel"></div>
+               </div>
+           </div>
+       </div>
+   </div>
+   <script>
+    let points = 0
+    let minutes = 0
+    let seconds = 0
+    let fuel = 15
+    const secondsEl = document.getElementById('seconds')
+    const minutesEl = document.getElementById('minutes')
+    const fuelEl = document.getElementById('fuel')
+    const pointsEl = document.getElementById('points')
+    let spaceship
+    let enemys = []
+    let enemyCounter = 0
+    let flag = true
+    secondsEl.innerHTML = '00'
+    minutesEl.innerHTML = '00'
+    pointsEl.innerHTML = points
+    fuelEl.style.width = fuel*2 + 'px'
+    let enemyCoords, bulletCoords, cronometer, fuelCounter
+    const parallax = document.querySelector('.parallax')
+    const calcWidth = () => window.innerWidth - 6
+    const calcHeight = () => window.innerHeight - 6
+    const random = (max, min)=> Math.floor(Math.random() * (max - min +1)) + min
+    const calcTop = height => random(calcHeight() - height/2, height/2*-1)
+    const deleteElement = (e) => e.parentElement.removeChild(e)
+    const calcCoords = (el) => {
+        return {
+            p1: {x: el.offsetLeft, y: el.offsetTop},
+            p2: {x: el.offsetLeft + el.width, y: el.offsetTop},
+            p3: {x: el.offsetLeft, y: el.offsetTop + el.height},
+            p4: {x: el.offsetLeft + el.width, y: el.offsetTop + el.height}
+        }
+    }
+    const isPointEnter = (p, parent) => (p.x > parent.p1.x && p.x < parent.p2.x) && (p.y > parent.p1.y && p.y < parent.p3.y)
+    const isElementCollided = (s, p) => isPointEnter(s.p1, p) || isPointEnter(s.p2, p) || isPointEnter(s.p3, p) ||isPointEnter(s.p4, p)
+    function interval () {
+        const time = random(1000, 8000)
+        setTimeout(() => {
+            const shipPos = random(0, window.screen.width-90)
+            new enemySpaceShip(shipPos)
+            interval()
+        }, time)
+    }
+    function cronometro () {
+        seconds++
+        if (seconds == 60) {
+            minutes++
+            seconds = 0
+        }
+        secondsEl.innerHTML = seconds < 10 ? '0'+seconds : seconds
+        minutesEl.innerHTML = minutes < 10 ? '0'+minutes : minutes
+    }
+    function addPoint() {
+        points++
+        pointsEl.innerHTML = points
+    }
+    function lowFuel () {
+        fuel--
+        fuelEl.style.width = fuel*2+'px'
+    }
+    window.onload = function() {
+        cronometer = setInterval(cronometro, 1000)
+        fuelCounter = setInterval(lowFuel, 1000)
+        spaceship = new mainSpaceship()
+        interval()
+        enemySpace = new enemySpaceShip()
+        document.addEventListener('keydown', e => {
+            if (flag) {
+                if (e.keyCode == 32) {
+                    const bullet = new FriendBullet()
+                }
+                flag = false
+            }
+        })
+        document.addEventListener('keyup', () => flag=true)
+        const intervals = [10000,8500, 15000]
+        const planets = [
+            'jupiter',
+            'mars',
+            'uranus',
+            'saturn',
+            'planet-earth'
+        ]
+        parallax.style.backgroundPosition = '8000px'
+        for (const interval of intervals) {
+            setInterval(() => {
+                const cond = random(2,0)
+                if (cond) {
+                    const size = random(5,1)
+                    const planet = planets[random(4,0)]
+                    createPlanet(size, planet)
+                }
+            }, interval)
+        }
+    }
+    function createPlanet(size, name) {
+        let planet = document.createElement('img')
+        planet.src = `assets/${name}.svg`
+        planet.className = `planet size-${size}`
+        planet.style.top = calcTop(planet.height)+'px'
+        parallax.appendChild(planet)
+        planet.addEventListener('animationend', e => deleteElement(e.target))
+    }
+    class Spaceship {
+        constructor (imageName, el) {
+            this.ship = document.createElement('img')
+            this.ship.src = `assets/${imageName}`
+            this.ship.className = 'spaceship'
+            el.appendChild(this.ship)
+        }
+        followMouse () {
+            window.addEventListener('mousemove', e => {
+                const mediumWidth = this.ship.offsetWidth / 2
+                const mediumHeight = this.ship.offsetHeight / 2
+                this.ship.style.left = e.clientX - mediumWidth+'px'
+                this.ship.style.top = e.clientY - mediumHeight +'px'
+            })
+        }
+    }
+    class mainSpaceship extends Spaceship {
+        constructor () {
+            super('main_spaceship.png', parallax)
+            super.followMouse()
+            this.ship.classList.add('main')
+        }
+    }
+    class enemySpaceShip extends Spaceship {
+        constructor (left) {
+            enemyCounter++
+            super('spaceship.svg', parallax)
+            this.id = enemyCounter
+            this.ship.style.left = left +'px'
+            this.ship.classList.add('enemy')
+            this.movement()
+            this.interval = null
+            this.shoot()
+            this.ship.addEventListener('animationend', (e)=> {
+                console.log('animation sinished')
+                deleteElement(e.target)
+                clearInterval(this.interval)
+                enemys = enemys.filter(s => s.id !== this.id)
+            })
+            enemys.push(this)
+        }
+        movement() {
+            let speed = random(15,7)
+            let timeMove = speed * 180
+            let transition = random(timeMove+800, timeMove-800)
+            this.ship.style.transition = transition+'ms'
+            setInterval(() => {
+                const eleccion = random(1,0)
+                let movement
+                const left = this.ship.offsetLeft
+                const flag =  true
+                movement = eleccion? random(left-180, left-300) : random(left+300, left+180)
+                if (movement <= 0) movement = random(left+300, left+180)
+                else if(movement >= window.screen.width - 100) movement = random(left-180, left-300)
+                this.ship.style.left = movement+'px'
+            },timeMove)
+            this.ship.style.animationDuration = speed+'s'
+        }
+        stopShoot () {
+            clearInterval(this.interval)
+        }
+        shoot() {
+            this.interval = setInterval(()=>{
+                new EnemyBullet(this.ship)
+            }, 1000) 
+
+        }
+    }
+    class Bullet {
+        constructor(ship, imageName, friend) {
+            this.interval = null
+            this.friend = friend
+            this.collisioned = false
+            this.bullet = document.createElement('img')
+            this.bullet.src = `assets/${imageName}`
+            this.bullet.className = 'bullet'
+            if(!friend) {
+                this.bullet.classList.add('enemy-bullet')
+            }
+            parallax.appendChild(this.bullet)
+            const initialTop = friend ? ship.offsetTop : ship.offsetTop + ship.offsetHeight
+            this.bullet.style.left = this.calcCenter(ship) + 'px'
+            this.bullet.style.top = initialTop + 'px'
+            this.bullet.style.animationDuration = this.calcTime(initialTop) + 's'
+            this.interval = setInterval(this.detectCollision.bind(this) ,70)
+            this.bullet.addEventListener('animationend', (e) => {
+                deleteElement(e.target)
+                clearInterval(this.interval)
+            })
+        }
+        calcTime(top) {
+            const height = window.screen.height + window.screen.height * .1
+            const distance = this.friend ? top : height - top
+            const v = height / 3
+            return distance / v
+        }
+        detectCollision() {
+            if(!this.collisioned) {
+                let collisionables = []
+                if (!this.friend) collisionables.push(spaceship)
+                else collisionables = enemys
+                bulletCoords = calcCoords(this.bullet)
+                for (const enemy of collisionables) {
+                    enemyCoords = calcCoords(enemy.ship)
+                    if (isElementCollided(bulletCoords,enemyCoords)) {
+                        this.collisioned = true
+                        this.bullet.style.display='none'
+                        this.explosion(bulletCoords.p1)
+                        if(this.friend) {
+                            addPoint()
+                            enemy.ship.classList.add('destroyed')
+                            enemy.stopShoot()
+                            enemys = enemys.filter(e => e.id !== enemy.id)
+                            clearInterval(this.interval)
+                            return
+                        } else {
+                            lowFuel()
+                        }
+                    }
+                }
+            }
+        }
+        explosion(coords) {
+            let explosion = document.createElement('img')
+            explosion.src = 'assets/explosion.gif'
+            explosion.className = 'explosion'
+            parallax.appendChild(explosion)
+            explosion.style.top = coords.y - 70 +'px'
+            explosion.style.left = coords.x+'px'
+            setTimeout(()=> {
+                deleteElement(explosion)
+            }, 550)
+        }
+        calcCenter(ship) {
+            const shipWidth = ship.offsetWidth/2
+            const bulletWidth = this.bullet.offsetWidth/2
+            return ship.offsetLeft + shipWidth - bulletWidth
+        }
+    }
+    window.onresize = function() {
+        
+    }
+    class FriendBullet extends Bullet {
+        constructor() {
+            super(spaceship.ship, 'mainBullet.svg', true)
+        }
+    }
+    class EnemyBullet extends Bullet {
+        constructor (ship) {
+            super(ship, 'enemyBullet.svg', false)       
+        }
+    }
+    class Fuel extends Bullet {
+        constructor(){
+            super(null, )
+        }
+    }
+   </script>
+</body>
+</html>
