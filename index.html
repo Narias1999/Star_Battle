@@ -11,12 +11,13 @@
     *{
         margin: 0;
         padding: 0;
+        box-sizing: border-box;
     }
     body {
         font-family: 'Poppins', sans-serif; 
     }
     .parallax {
-        --ship-width: 80px;
+        --ship-width: 65px;
         position: fixed;
         cursor: none;
         width: 100%;
@@ -41,6 +42,13 @@
         animation-name:upBullet;
         animation-duration: 3s;
         animation-timing-function: linear;
+    }
+    .fuel {
+        width: 55px;
+        position: absolute;
+        top: -60px;
+        z-index: 5;
+        animation: downBullet 4s linear;
     }
     .enemy-bullet {
         animation-name: downBullet;
@@ -94,12 +102,7 @@
         position: absolute;
         width: 80px;
     }
-    .destroyed {
-        animation-name: destroyShip;
-        animation-duration: 1s;
-        opacity: 0;
-    }
-    .fuel {
+    .fuel-counter {
         display: flex;
         align-items: center;
     }
@@ -123,7 +126,7 @@
     }
     .scores {
         box-sizing: border-box;
-        width: 105px;
+        width: 125px;
         padding: 12px;
         position: absolute;
         z-index: 100;
@@ -133,11 +136,71 @@
         border-bottom-left-radius: 4px;
         background: #fff;
     }
+    .more {
+        color: #32fa12;
+        font-weight: 600;
+        content: '+6';
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        animation: disapear 1.3s linear;
+        display: inline-block;
+        z-index: 100;
+    }
     #points:after {
         content: ' pts.'
     }
     #seconds:after {
         content: ' m.'
+    }
+    .control-view {
+        width: 100%;
+        position: fixed;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        z-index: 2000;
+    }
+    .game-over {
+        transform: scale(1);
+        transition: .3s;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        justify-content: center;
+        max-width: 400px;
+        padding: 15px;
+    }
+    .btn, .game-over input {
+        outline: none;
+        padding: 9px;
+        border: 2px solid #32ceff;
+        margin-bottom: 15px;
+        background: transparent;
+        border-radius: 3px;
+        color: #fff;
+        font-family: 'Poppins', sans-serif;
+        font-size: 16px;
+    }
+    .btn {
+        background: #32ceff !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .game-over form {
+        width: 100%
+    }
+    .game-over input {
+        width: 100%;
+    }
+    .game-over h2 {
+        z-index: 40;
+        text-transform: uppercase;
+        color: #fff;
+        font-size: 65px;
     }
     @media screen and (max-width: 700px) {
         .scores {
@@ -149,18 +212,6 @@
             padding: 0 15px;
         }
     }
-    /* @media (orientation:portrait) {
-        .parallax {
-            height: 100vh !important;
-            width: 100vw !important;
-        }
-    }
-    @media (orientation:landscape) {
-        .parallax {
-            height: 100vh !important;
-            width: 100vw !important;
-        }
-    } */
     @keyframes movePlanet{
         from {
             transform: translatex(0);
@@ -178,14 +229,14 @@
             top: 110vh;
         }
     }
-    @keyframes destroyShip {
+    @keyframes disapear {
         from {
-            transform: rotate(0) translateY(0);
             opacity: 1;
+            transform: translateY(0)
         }
         to {
+            transform: translateY(-70px);
             opacity: 0;
-            transform: rotate(200deg) translateY(-55px);
         }
     }
     </style>
@@ -200,11 +251,20 @@
                 <span class="icon">&#128336;</span>
                 <span id="minutes"></span>:<span id="seconds"></span>
            </div>
-           <div class="fuel">
+           <div class="fuel-counter">
                <span class="icon">&#9981;</span>
                <div class="counter">
                    <div id="fuel"></div>
                </div>
+           </div>
+       </div>
+       <div class="control-view">
+           <div class="game-over">
+               <h2>Game Over</h2>
+               <form id="form">
+                    <input type="text" placeholder="Nombre." class="txt">
+                    <input type="submit" class="btn">
+               </form>
            </div>
        </div>
    </div>
@@ -219,13 +279,16 @@
     const pointsEl = document.getElementById('points')
     let spaceship
     let enemys = []
+    let ships = []
     let enemyCounter = 0
     let flag = true
+    let appearShips = true
     secondsEl.innerHTML = '00'
     minutesEl.innerHTML = '00'
     pointsEl.innerHTML = points
     fuelEl.style.width = fuel*2 + 'px'
-    let enemyCoords, bulletCoords, cronometer, fuelCounter
+    let enemyCoords, bulletCoords, cronometer, fuelCounter, loseInterval, explosionPos
+    let maxTime = 9000
     const parallax = document.querySelector('.parallax')
     const calcWidth = () => window.innerWidth - 6
     const calcHeight = () => window.innerHeight - 6
@@ -242,13 +305,55 @@
     }
     const isPointEnter = (p, parent) => (p.x > parent.p1.x && p.x < parent.p2.x) && (p.y > parent.p1.y && p.y < parent.p3.y)
     const isElementCollided = (s, p) => isPointEnter(s.p1, p) || isPointEnter(s.p2, p) || isPointEnter(s.p3, p) ||isPointEnter(s.p4, p)
+    let loseCounter = 0
+    function lose () {
+        spaceship.ship.style.opacity = 0
+        explosionPos = calcCoords(spaceship.ship).p1
+        explosionPos.x +=20
+        explosionPos.y +=20
+        clearInterval(cronometer)
+        clearInterval(fuelCounter)
+        appearShips = false
+        loseInterval = setInterval(()=> {
+            loseCounter++
+            if(loseCounter < 30) {
+                explosion(explosionPos)
+                if (random(1,0)) explosionPos.x += random(10, 30)
+                else explosionPos.x -= random(10, 30)
+                if (random(1,0)) explosionPos.y += random(10, 30)
+                else explosionPos.y -= random(10, 30)
+            } else gameOver()
+        }, 100)
+        for (ship of ships) {
+            if (!ship.type) ship.stopShoot()
+        }
+    }
+    function gameOver() {
+        clearInterval(loseInterval)
+        document.querySelector('.game-over').style.transform = 'scale(1)'
+    }
     function interval () {
-        const time = random(1000, 8000)
-        setTimeout(() => {
-            const shipPos = random(0, window.screen.width-90)
-            new enemySpaceShip(shipPos)
-            interval()
-        }, time)
+        
+            if(maxTime >= 1800) maxTime -= 90
+            const time = random(1000, maxTime)
+            setTimeout(() => {
+                if (appearShips) {
+                    const shipPos = random(0, window.screen.width-90)
+                    new enemySpaceShip(shipPos)
+                    interval()
+                }
+            }, time)
+        
+    }
+    function interval2 () {
+            const time = random(4000, 10000)
+            setTimeout(() => {
+                if (appearShips) {
+                    const shipPos = random(0, window.screen.width-90)
+                    new friendSpaceship(shipPos)
+                    interval2()
+                }
+            }, time)
     }
     function cronometro () {
         seconds++
@@ -259,19 +364,52 @@
         secondsEl.innerHTML = seconds < 10 ? '0'+seconds : seconds
         minutesEl.innerHTML = minutes < 10 ? '0'+minutes : minutes
     }
-    function addPoint() {
-        points++
+    function addPoints(n) {
+        points += n
         pointsEl.innerHTML = points
     }
-    function lowFuel () {
-        fuel--
+    function lowPoints(n) {
+        points -= n
+        pointsEl.innerHTML = points
+    }
+    function lowFuel (n = 1) {
+        fuel = fuel - n < 0 ? 0 : fuel - n
         fuelEl.style.width = fuel*2+'px'
+        if(!fuel) {
+            lose()
+        }
+    }
+    function addFuel(n) {
+        fuel = fuel+n > 30 ? 30 : fuel + n
+        fuelEl.style.width = fuel*2+'px'
+    }
+    function fuelFall() {
+        const time = random(3000, 7000)
+        setTimeout(()=> {
+            if (appearShips) {
+                new Fuel()
+                fuelFall()
+            }
+        }, time)
+    }
+    function explosion(coords) {
+        let explosion = document.createElement('img')
+        explosion.src = 'assets/explosion.gif'
+        explosion.className = 'explosion'
+        parallax.appendChild(explosion)
+        explosion.style.top = coords.y - 70 +'px'
+        explosion.style.left = coords.x+'px'
+        setTimeout(()=> {
+            deleteElement(explosion)
+        }, 550)
     }
     window.onload = function() {
         cronometer = setInterval(cronometro, 1000)
         fuelCounter = setInterval(lowFuel, 1000)
+        fuelFall()
         spaceship = new mainSpaceship()
         interval()
+        interval2()
         enemySpace = new enemySpaceShip()
         document.addEventListener('keydown', e => {
             if (flag) {
@@ -311,11 +449,17 @@
         planet.addEventListener('animationend', e => deleteElement(e.target))
     }
     class Spaceship {
-        constructor (imageName, el) {
+        constructor (imageName) {
             this.ship = document.createElement('img')
-            this.ship.src = `assets/${imageName}`
+            this.ship.src = `assets/${imageName}.svg`
             this.ship.className = 'spaceship'
-            el.appendChild(this.ship)
+            parallax.appendChild(this.ship)
+            this.ship.addEventListener('animationend', (e)=> {
+                e.target.style.display = 'none'
+                deleteElement(e.target)
+                clearInterval(this.interval)
+                enemys = enemys.filter(s => s.id !== this.id)
+            })
         }
         followMouse () {
             window.addEventListener('mousemove', e => {
@@ -324,32 +468,6 @@
                 this.ship.style.left = e.clientX - mediumWidth+'px'
                 this.ship.style.top = e.clientY - mediumHeight +'px'
             })
-        }
-    }
-    class mainSpaceship extends Spaceship {
-        constructor () {
-            super('main_spaceship.png', parallax)
-            super.followMouse()
-            this.ship.classList.add('main')
-        }
-    }
-    class enemySpaceShip extends Spaceship {
-        constructor (left) {
-            enemyCounter++
-            super('spaceship.svg', parallax)
-            this.id = enemyCounter
-            this.ship.style.left = left +'px'
-            this.ship.classList.add('enemy')
-            this.movement()
-            this.interval = null
-            this.shoot()
-            this.ship.addEventListener('animationend', (e)=> {
-                console.log('animation sinished')
-                deleteElement(e.target)
-                clearInterval(this.interval)
-                enemys = enemys.filter(s => s.id !== this.id)
-            })
-            enemys.push(this)
         }
         movement() {
             let speed = random(15,7)
@@ -368,6 +486,58 @@
             },timeMove)
             this.ship.style.animationDuration = speed+'s'
         }
+    }
+    class mainSpaceship extends Spaceship {
+        constructor () {
+            super('mainSpaceShip')
+            super.followMouse()
+            this.interval = setInterval(this.detectCollision.bind(this), 70)
+            this.ship.classList.add('main')
+        }
+        detectCollision() {
+            const shipCoords = calcCoords(this.ship)
+            for (const ship of ships) {
+                const enemyCoords = calcCoords(ship.ship)
+                if(isElementCollided(enemyCoords, shipCoords)) {
+                    ship.ship.style.opacity = 'none'
+                    deleteElement(ship.ship)
+                    lowFuel(fuel)
+                    if(!ship.type) {
+                        ship.stopShoot()
+                    }
+                    ships = ships.filter(e => e.id != ship.id)
+                    enemys = enemys.filter(e => e.id != ship.id)
+                }
+            }
+        }
+    }
+    class friendSpaceship extends Spaceship {
+        constructor(left) {
+            enemyCounter++
+            super('friendSpaceShip')
+            this.movement()
+            this.id = enemyCounter
+            this.type = 'Friend'
+            this.ship.style.left = left +'px'
+            this.ship.classList.add('enemy')
+            ships.push(this)
+            enemys.push(this)
+        }
+    }
+    class enemySpaceShip extends Spaceship {
+        constructor (left) {
+            enemyCounter++
+            super('spaceship')
+            this.id = enemyCounter
+            this.ship.style.left = left +'px'
+            this.ship.classList.add('enemy')
+            this.movement()
+            this.interval = null
+            this.shoot()
+            ships.push(this)
+            enemys.push(this)
+        }
+
         stopShoot () {
             clearInterval(this.interval)
         }
@@ -377,14 +547,15 @@
             }, 1000) 
 
         }
-    }
+    }   
     class Bullet {
         constructor(ship, imageName, friend) {
             this.interval = null
+            this.ship = ship
             this.friend = friend
             this.collisioned = false
             this.bullet = document.createElement('img')
-            this.bullet.src = `assets/${imageName}`
+            this.bullet.src = `assets/${imageName}.svg`
             this.bullet.className = 'bullet'
             if(!friend) {
                 this.bullet.classList.add('enemy-bullet')
@@ -411,37 +582,33 @@
                 let collisionables = []
                 if (!this.friend) collisionables.push(spaceship)
                 else collisionables = enemys
-                bulletCoords = calcCoords(this.bullet)
+                const bulletCoords = calcCoords(this.bullet)
                 for (const enemy of collisionables) {
                     enemyCoords = calcCoords(enemy.ship)
                     if (isElementCollided(bulletCoords,enemyCoords)) {
                         this.collisioned = true
                         this.bullet.style.display='none'
-                        this.explosion(bulletCoords.p1)
+                        explosion(bulletCoords.p1)
                         if(this.friend) {
-                            addPoint()
-                            enemy.ship.classList.add('destroyed')
-                            enemy.stopShoot()
-                            enemys = enemys.filter(e => e.id !== enemy.id)
-                            clearInterval(this.interval)
+                                enemy.ship.style.transition = '.2s'
+                                enemy.ship.style.opacity = '0'
+                                enemys = enemys.filter(e => e.id !== enemy.id)
+                                ships = ships.filter(e => e.id !== enemy.id)
+                                clearInterval(this.interval)
+                            if (enemy.type != 'Friend') {
+                                addPoints(5)
+                                enemy.stopShoot()
+                            } else {
+                                lowPoints(20)
+                            }
                             return
                         } else {
-                            lowFuel()
+                            lowPoints(10)
+                            lowFuel(15)
                         }
                     }
                 }
             }
-        }
-        explosion(coords) {
-            let explosion = document.createElement('img')
-            explosion.src = 'assets/explosion.gif'
-            explosion.className = 'explosion'
-            parallax.appendChild(explosion)
-            explosion.style.top = coords.y - 70 +'px'
-            explosion.style.left = coords.x+'px'
-            setTimeout(()=> {
-                deleteElement(explosion)
-            }, 550)
         }
         calcCenter(ship) {
             const shipWidth = ship.offsetWidth/2
@@ -449,22 +616,47 @@
             return ship.offsetLeft + shipWidth - bulletWidth
         }
     }
-    window.onresize = function() {
-        
-    }
     class FriendBullet extends Bullet {
         constructor() {
-            super(spaceship.ship, 'mainBullet.svg', true)
+            super(spaceship.ship, 'mainBullet', true)
         }
     }
     class EnemyBullet extends Bullet {
         constructor (ship) {
-            super(ship, 'enemyBullet.svg', false)       
+            super(ship, 'enemyBullet', false)       
         }
     }
-    class Fuel extends Bullet {
+    class Fuel {
         constructor(){
-            super(null, )
+            this.collided = false
+            this.element = document.createElement('img')
+            this.element.src = 'assets/fuel.svg'
+            this.element.className = 'fuel'
+            this.element.style.top = -100+'px'
+            const left = random(document.body.offsetWidth - 80, 0)
+            this.element.style.left = left + 'px'
+            this.interval = setInterval(this.detectCollision.bind(this) ,70)
+            parallax.appendChild(this.element)
+        }
+        detectCollision() {
+            if (!this.collided) {
+                const fuelCoords = calcCoords(this.element)
+                const shipCoords = calcCoords(spaceship.ship)
+                if(isElementCollided(fuelCoords, shipCoords)) {
+                    this.collided = true
+                    let more = document.createElement('div')
+                    more.className = 'more'
+                    more.innerHTML = '+15'
+                    more.style.top = fuelCoords.p1.y + 20 + 'px'
+                    more.style.left = fuelCoords.p1.x + 20 + 'px'
+                    this.element.style.display = 'none'
+                    parallax.appendChild(more)
+                    more.addEventListener('animationend', ()=> {
+                        deleteElement(more)
+                    })
+                    addFuel(15)
+                }
+            }
         }
     }
    </script>
