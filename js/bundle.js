@@ -8,6 +8,7 @@ let points = 0
 let minutes = 0
 let seconds = 0
 let fuel = 15
+let isStarted = false
 const secondsEl = document.getElementById('seconds')
 const minutesEl = document.getElementById('minutes')
 const fuelEl = document.getElementById('fuel')
@@ -174,22 +175,24 @@ function shoot (e) {
     }
 }
 function startGame() {
-    const principal = document.querySelector('.principal')
-    const scores = document.querySelector('.scores')
-    principal.style.transform = 'translateX(-100%)'
-    scores.style.display = 'block'
-    parallax.style.cursor = 'none'
-    spaceship = new mainSpaceship()
-    setTimeout(()=> {
-        cronometer = setInterval(cronometro, 1000)
-        fuelCounter = setInterval(lowFuel, 1000)
-        fuelFall()
-        interval()
-        interval2()
-        console.log(document)
-        document.addEventListener('keyup', () => flag=true)
-        document.addEventListener('keydown', shoot)
-    }, 1500)
+    if (!isStarted) {
+        isStarted = true
+        const principal = document.querySelector('.principal')
+        const scores = document.querySelector('.scores')
+        principal.style.transform = 'translateX(-100%)'
+        scores.style.display = 'block'
+        parallax.style.cursor = 'none'
+        spaceship = new mainSpaceship()
+        setTimeout(()=> {
+            cronometer = setInterval(cronometro, 1000)
+            fuelCounter = setInterval(lowFuel, 1000)
+            fuelFall()
+            interval()
+            interval2()
+            document.addEventListener('keyup', () => flag=true)
+            document.addEventListener('keydown', shoot)
+        }, 1000)
+    }
 }
 window.onload = function() {
     const startButton = document.getElementById('start')
