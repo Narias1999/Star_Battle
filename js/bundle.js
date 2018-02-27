@@ -16,15 +16,15 @@ document.getElementById('rankingB').addEventListener('click', e => {
 document.getElementById('closeRanking').addEventListener('click', e => {
     modal({modal: 'rankingM'})
 })
-let yetBeStarted = false
 let audios = true
+const touchScreen = 'ontouchstart' in window
 let enemyCoords, bulletCoords, cronometer, fuelCounter, loseInterval, explosionPos, points, minutes, seconds, fuel
 let isStarted = false
 const secondsEl = document.getElementById('seconds')
 const minutesEl = document.getElementById('minutes')
 const fuelEl = document.getElementById('fuel')
 const pointsEl = document.getElementById('points')
-let spaceship, enemys, ships, enemyCounter, flag, notDie, maxTime, loseCounter
+let spaceship, enemys, ships, enemyCounter, flag, notDie, maxTime, loseCounter, touchInterval, touchFlag
 const parallax = document.querySelector('.parallax')
 const calcWidth = () => window.innerWidth - 6
 const calcHeight = () => window.innerHeight - 6
@@ -42,6 +42,7 @@ const calcCoords = (el) => {
 const isPointEnter = (p, parent) => (p.x > parent.p1.x && p.x < parent.p2.x) && (p.y > parent.p1.y && p.y < parent.p3.y)
 const isElementCollided = (s, p) => isPointEnter(s.p1, p) || isPointEnter(s.p2, p) || isPointEnter(s.p3, p) ||isPointEnter(s.p4, p)
 function lose () {
+    document.querySelector('.mobile-view').style.display = 'none'
     spaceship.ship.style.opacity = 0
     explosionPos = calcCoords(spaceship.ship).p1
     explosionPos.x +=20
@@ -84,7 +85,7 @@ function modal(conf) {
 }
 function gameOver() {
     const elemento = document.querySelector('.game-over')
-    document.querySelector('.scores').style.display = 'none'
+    document.querySelector('.scores').style.opacity = '0.7'
     document.getElementById('scoreF').value = points
     document.getElementById('minutesF').value = minutesEl.innerHTML
     document.getElementById('secondsF').value = secondsEl.innerHTML
@@ -98,7 +99,7 @@ function interval () {
     const time = random(1000, maxTime)
     setTimeout(() => {
         if (notDie) {
-            const shipPos = random(0, window.screen.width-90)
+            const shipPos = random(0, parallax.offsetWidth-90)
             new enemySpaceShip(shipPos)
             interval()
         }
@@ -109,7 +110,7 @@ function interval2 () {
     const time = random(8000, 10000)
     setTimeout(() => {
         if (notDie) {
-            const shipPos = random(0, window.screen.width-90)
+            const shipPos = random(0, parallax.offsetWidth-90)
             new friendSpaceship(shipPos)
             interval2()
         }
@@ -176,6 +177,9 @@ function explosion(coords) {
     }, 550)
 }
 function shoot (e) {
+    if (touchScreen && notDie) {
+        new FriendBullet()
+    }
     if (flag) {
         if (e.keyCode == 32) new FriendBullet()
         flag = false
@@ -199,10 +203,13 @@ function startGame() {
         pointsEl.innerHTML = points
         fuelEl.style.width = fuel*2 + 'px'
         isStarted = true
+        if (touchScreen) {
+            document.querySelector('.mobile-view').style.display = 'flex'
+        }
         const principal = document.querySelector('.principal')
         const scores = document.querySelector('.scores')
         principal.style.transform = 'translateX(-100%)'
-        scores.style.display = 'block'
+        scores.style.opacity = '0.7'
         parallax.style.cursor = 'none'
         spaceship = new mainSpaceship()
         setTimeout(()=> {
@@ -212,11 +219,16 @@ function startGame() {
             interval()
             interval2()
             document.addEventListener('keyup', () => flag=true)
-            document.addEventListener('keydown', shoot)
+            if (touchScreen) document.querySelector('.shoot').addEventListener('touchstart', shoot)
+            else document.addEventListener('keydown', shoot)
         }, 1000)
     }
 }
 window.onload = function() {
+    if(touchScreen) {
+        document.querySelector('.pc').style.display = 'none'
+        document.querySelector('.mobile').style.display = 'block'
+    }
     const startButton = document.getElementById('start')
     start.addEventListener('click', startGame)
     const intervals = [10000,8500, 15000]
@@ -260,6 +272,69 @@ class Spaceship {
             enemys = enemys.filter(s => s.id !== this.id)
         })
     }
+    padControl() {
+        document.querySelector('.up').addEventListener('touchstart', e => {
+            e.preventDefault()
+            let shipTop = this.ship.offsetTop
+            let plus = 0
+            touchInterval = setInterval(()=> {
+                plus -= 2
+                const sumatory = shipTop + plus
+                this.ship.style.top = sumatory > 0 ? sumatory+'px' : 0+'px'
+            }, 20)
+        })
+        document.querySelector('.up').addEventListener('touchend', e => {
+            e.preventDefault()
+            clearInterval(touchInterval)
+        })
+        document.querySelector('.down').addEventListener('touchstart', e => {
+            e.preventDefault()
+            let shipTop = this.ship.offsetTop
+            let plus = 0
+            touchInterval = setInterval(()=> {
+                plus += 2
+                const height = parallax.offsetHeight - this.ship.height
+                const sumatory = shipTop + plus
+                this.ship.style.top = sumatory > height ? height+'px' : sumatory+'px'
+            }, 20)
+        })
+        document.querySelector('.down').addEventListener('touchend', e => {
+            e.preventDefault()
+            clearInterval(touchInterval)
+        })
+        document.querySelector('.left').addEventListener('touchstart', e => {
+            e.preventDefault()
+            let shipLeft = this.ship.offsetLeft
+            let plus = 0
+            touchInterval = setInterval(()=> {
+                plus -= 2
+                const sumatory = shipLeft + plus
+                this.ship.style.left = sumatory > 0 ? sumatory+'px' : 0+'px'
+            }, 20)
+        })
+        document.querySelector('.left').addEventListener('touchend', e => {
+            e.preventDefault()
+            clearInterval(touchInterval)
+        })
+        document.querySelector('.rigth').addEventListener('touchstart', e => {
+            e.preventDefault()
+            let shipLeft = this.ship.offsetLeft
+            const width = parallax.offsetWidth - this.ship.width
+            let plus = 0
+            touchInterval = setInterval(()=> {
+                plus += 2
+                const sumatory = shipLeft + plus
+                this.ship.style.left = sumatory > width ? width+'px' : sumatory+'px'
+            }, 13)
+        })
+        document.querySelector('.rigth').addEventListener('touchend', e => {
+            e.preventDefault()
+            clearInterval(touchInterval)
+        })
+    }
+    cancelInterval(direction) {
+        
+    }
     followMouse () {
         window.addEventListener('mousemove', e => {
             if(notDie) {
@@ -282,7 +357,7 @@ class Spaceship {
             const flag =  true
             movement = eleccion? random(left-180, left-300) : random(left+300, left+180)
             if (movement <= 0) movement = random(left+300, left+180)
-            else if(movement >= window.screen.width - 100) movement = random(left-180, left-300)
+            else if(movement >= parallax.offsetWidth - 100) movement = random(left-180, left-300)
             this.ship.style.left = movement+'px'
         },timeMove)
         this.ship.style.animationDuration = speed+'s'
@@ -291,7 +366,8 @@ class Spaceship {
 class mainSpaceship extends Spaceship {
     constructor () {
         super('mainSpaceShip')
-        super.followMouse()
+        if(touchScreen) super.padControl()
+        else super.followMouse()
         this.interval = setInterval(this.detectCollision.bind(this), 70)
         this.ship.classList.add('main')
     }
@@ -300,7 +376,7 @@ class mainSpaceship extends Spaceship {
         for (const ship of ships) {
             const enemyCoords = calcCoords(ship.ship)
             if(isElementCollided(enemyCoords, shipCoords)) {
-                ship.ship.style.opacity = 'none'
+                ship.ship.style.opacity = '0'
                 deleteElement(ship.ship)
                 lowFuel(fuel)
                 if(!ship.type) {
@@ -377,7 +453,7 @@ class Bullet {
         })
     }
     calcTime(top) {
-        const height = window.screen.height + window.screen.height * .1
+        const height = parallax.offsetHeight + parallax.offsetHeight * .1
         const distance = this.friend ? top : height - top
         const v = height / 3
         return distance / v
@@ -444,7 +520,7 @@ class Fuel {
         parallax.appendChild(this.element)
     }
     detectCollision() {
-        if (!this.collided) {
+        if (!this.collided && notDie) {
             const fuelCoords = calcCoords(this.element)
             const shipCoords = calcCoords(spaceship.ship)
             if(isElementCollided(fuelCoords, shipCoords)) {
