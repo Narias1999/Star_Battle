@@ -3,28 +3,28 @@ audioExplosion.volume = .4
 const audioFuel = document.getElementById('soundFuel')
 const audioPausa = document.getElementById('soundPausa')
 const audioShoot = document.getElementById('soundShoot')
+document.getElementById('instructionsB').addEventListener('click', e => {
+    modal({action: 'show', modal: 'instructionsM'})
+})
+document.getElementById('closeInstructions').addEventListener('click', e => {
+    modal({modal: 'instructionsM'})
+})
+document.getElementById('rankingB').addEventListener('click', e => {
+    getScores()
+    modal({action: 'show', modal: 'rankingM'})
+})
+document.getElementById('closeRanking').addEventListener('click', e => {
+    modal({modal: 'rankingM'})
+})
+let yetBeStarted = false
 let audios = true
-let points = 0
-let minutes = 0
-let seconds = 0
-let fuel = 15
+let enemyCoords, bulletCoords, cronometer, fuelCounter, loseInterval, explosionPos, points, minutes, seconds, fuel
 let isStarted = false
 const secondsEl = document.getElementById('seconds')
 const minutesEl = document.getElementById('minutes')
 const fuelEl = document.getElementById('fuel')
 const pointsEl = document.getElementById('points')
-let spaceship
-let enemys = []
-let ships = []
-let enemyCounter = 0
-let flag = false
-let appearShips = true
-secondsEl.innerHTML = '00'
-minutesEl.innerHTML = '00'
-pointsEl.innerHTML = points
-fuelEl.style.width = fuel*2 + 'px'
-let enemyCoords, bulletCoords, cronometer, fuelCounter, loseInterval, explosionPos
-let maxTime = 9000
+let spaceship, enemys, ships, enemyCounter, flag, notDie, maxTime, loseCounter
 const parallax = document.querySelector('.parallax')
 const calcWidth = () => window.innerWidth - 6
 const calcHeight = () => window.innerHeight - 6
@@ -41,7 +41,6 @@ const calcCoords = (el) => {
 }
 const isPointEnter = (p, parent) => (p.x > parent.p1.x && p.x < parent.p2.x) && (p.y > parent.p1.y && p.y < parent.p3.y)
 const isElementCollided = (s, p) => isPointEnter(s.p1, p) || isPointEnter(s.p2, p) || isPointEnter(s.p3, p) ||isPointEnter(s.p4, p)
-let loseCounter = 0
 function lose () {
     spaceship.ship.style.opacity = 0
     explosionPos = calcCoords(spaceship.ship).p1
@@ -50,7 +49,7 @@ function lose () {
     document.removeEventListener('keydown', shoot)
     clearInterval(cronometer)
     clearInterval(fuelCounter)
-    appearShips = false
+    notDie = false
     loseInterval = setInterval(()=> {
         loseCounter++
         if(loseCounter < 10) {
@@ -65,11 +64,11 @@ function lose () {
         if (!ship.type) ship.stopShoot()
     }
 }
-function modal(action) {
+function modal(conf) {
     const time = 1
-    const modal = document.querySelector('.instructions')
-    const wrap = document.querySelector('.modal-wrap')
-    if (action == 'show') {
+    const modal = document.getElementById(conf.modal)
+    const wrap = document.querySelector(`.modal-wrap`)
+    if (conf.action == 'show') {
         modal.style.display = 'block'
         wrap.style.display = 'block'
         modal.style.animation = `showModal ${time}s ease`
@@ -85,32 +84,36 @@ function modal(action) {
 }
 function gameOver() {
     const elemento = document.querySelector('.game-over')
+    document.querySelector('.scores').style.display = 'none'
+    document.getElementById('scoreF').value = points
+    document.getElementById('minutesF').value = minutesEl.innerHTML
+    document.getElementById('secondsF').value = secondsEl.innerHTML
     parallax.style.cursor = 'default'
     clearInterval(loseInterval)
     elemento.style.height = '100%'
     elemento.style.transform = 'scale(1)'
 }
 function interval () {
-        if(maxTime >= 1800) maxTime -= 90
-        const time = random(1000, maxTime)
-        setTimeout(() => {
-            if (appearShips) {
-                const shipPos = random(0, window.screen.width-90)
-                new enemySpaceShip(shipPos)
-                interval()
-            }
-        }, time)
+    if(maxTime >= 1800) maxTime -= 90
+    const time = random(1000, maxTime)
+    setTimeout(() => {
+        if (notDie) {
+            const shipPos = random(0, window.screen.width-90)
+            new enemySpaceShip(shipPos)
+            interval()
+        }
+    }, time)
     
 }
 function interval2 () {
-        const time = random(8000, 10000)
-        setTimeout(() => {
-            if (appearShips) {
-                const shipPos = random(0, window.screen.width-90)
-                new friendSpaceship(shipPos)
-                interval2()
-            }
-        }, time)
+    const time = random(8000, 10000)
+    setTimeout(() => {
+        if (notDie) {
+            const shipPos = random(0, window.screen.width-90)
+            new friendSpaceship(shipPos)
+            interval2()
+        }
+    }, time)
 }
 function cronometro () {
     seconds++
@@ -122,14 +125,17 @@ function cronometro () {
     minutesEl.innerHTML = minutes < 10 ? '0'+minutes : minutes
 }
 function addPoints(n) {
+    ne = parseInt(n)
     points += n
     pointsEl.innerHTML = points
 }
 function lowPoints(n) {
+    n = parseInt(n)
     points -= n
     pointsEl.innerHTML = points
 }
 function lowFuel (n = 1) {
+    ne = parseInt(n)
     fuel = fuel - n < 0 ? 0 : fuel - n
     fuelEl.style.width = fuel*2+'px'
     if(!fuel) {
@@ -137,6 +143,7 @@ function lowFuel (n = 1) {
     }
 }
 function addFuel(n) {
+    n = parseInt(n)
     if(audios) {
         audioFuel.currentTime = 0.2
         audioFuel.play()
@@ -147,7 +154,7 @@ function addFuel(n) {
 function fuelFall() {
     const time = random(3000, 7000)
     setTimeout(()=> {
-        if (appearShips) {
+        if (notDie) {
             new Fuel()
             fuelFall()
         }
@@ -176,6 +183,21 @@ function shoot (e) {
 }
 function startGame() {
     if (!isStarted) {
+        enemyCounter = 0
+        flag = false
+        maxTime = 9000
+        enemys = []
+        ships = []
+        points = 0
+        minutes = 0
+        fuel = 15
+        loseCounter = 0
+        seconds = 0
+        notDie = true
+        secondsEl.innerHTML = '00'
+        minutesEl.innerHTML = '00'
+        pointsEl.innerHTML = points
+        fuelEl.style.width = fuel*2 + 'px'
         isStarted = true
         const principal = document.querySelector('.principal')
         const scores = document.querySelector('.scores')
@@ -240,7 +262,7 @@ class Spaceship {
     }
     followMouse () {
         window.addEventListener('mousemove', e => {
-            if(appearShips) {
+            if(notDie) {
                 const mediumWidth = this.ship.offsetWidth / 2
                 const mediumHeight = this.ship.offsetHeight / 2
                 this.ship.style.left = e.clientX - mediumWidth+'px'
@@ -440,5 +462,45 @@ class Fuel {
                 addFuel(15)
             }
         }
+    }
+}
+document.getElementById('form').addEventListener('submit', async e => {
+    e.preventDefault()
+    const body = new FormData(e.target)
+    let res = await fetch('http://localhost/star_battle/backend/insertar.php', {
+        method: 'POST',
+        body
+    })
+    res = await res.json()
+    if(res.status == 200) {
+        e.target.reset()
+        const gameOverElement = document.querySelector('.game-over')
+        isStarted = false        
+        getScores()
+        gameOverElement.style.height = 'auto'
+        gameOverElement.style.transform = 'scale(0)'
+        document.querySelector('.principal').style.transform = 'translateX(0)'
+        setTimeout(()=> {
+            modal({action: 'show', modal: 'rankingM'})
+        }, 600)
+    }
+})
+async function getScores() {
+    const tableElement = document.getElementById('rankingBody')
+    tableElement.innerHTML = ''
+    let response = await fetch('http://localhost/star_battle/backend/listar.php')
+    response = await response.json()
+    const scores = response.data
+    for (const [index, score] of scores.entries()) {
+        const tr = document.createElement('tr')
+        const minutes = score.minutes < 10 ? '0'+score.minutes : score.minutes
+        const seconds = score.seconds < 10 ? '0'+score.seconds : score.seconds
+        tr.innerHTML = `
+        <td>${index+1}</td>
+        <td>${score.username}</td>
+        <td>${score.score}</td>
+        <td>${minutes}:${seconds} m</td>
+        `
+        tableElement.appendChild(tr)
     }
 }

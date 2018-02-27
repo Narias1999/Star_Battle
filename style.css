@@ -175,7 +175,7 @@ body {
     display: flex;
     justify-content: space-between;
 }
-.instructions {
+.modal {
     display: none;
     position: fixed;
     margin: 0 auto;
@@ -186,7 +186,7 @@ body {
     border-radius: 3px;
     overflow: hidden;
 }
-.instructions .title {
+.modal .title {
     width: 100%;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -194,20 +194,20 @@ body {
     background: var(--color-primary);
     padding: 20px;
 }
-.instructions .text {
+.modal .text {
     padding: 20px;
     overflow-y: scroll;
-    height: 60vh;
+    max-height: 60vh;
     text-align: justify;
 }
-.instructions .text h3 {
+.modal .text h3 {
     padding: 10px 0;
 }
-.instructions .actions {
+.modal .actions {
     box-shadow: 0 -1px 4px #0000008a;;
     padding: 10px;
 }
-.instructions p{
+.modal p{
     padding: 0 10px;
 }
 .btn, .game-over input {
@@ -256,6 +256,26 @@ h2 {
     text-transform: uppercase;
     color: #fff;
     font-size: 65px;
+}
+.none {
+    display: none;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+}
+thead {
+    background: var(--color-primary);
+    color: #fff;
+}
+th {
+    border: 1px solid var(--color-primary);
+    padding: 6px;
+}
+td {
+    padding: 4px;
+    border: 1px solid var(--color-primary);
 }
 @media screen and (max-width: 700px) {
     .scores {

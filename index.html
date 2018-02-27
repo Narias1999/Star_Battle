@@ -29,7 +29,10 @@
            <div class="game-over">
                <h2>Game Over</h2>
                <form id="form">
-                    <input type="text" placeholder="Nombre." class="txt">
+                    <input type="text" placeholder="Nombre." class="txt" id="username" required name="username">
+                    <input type="text" class="none" id="scoreF" name="score">
+                    <input type="text" class="none" id="minutesF" name="minutes">
+                    <input type="text" class="none" id="secondsF" name="seconds">
                     <input type="submit" class="btn">
                </form>
            </div>
@@ -37,13 +40,13 @@
                <div>
                    <h2>STAR BATTLE</h2>
                    <button class="btn" id='start'>jugar</button>
-                   <button class="btn" onclick="modal('show')">instrucciones</button>
-                   <button class="btn">mejores puntajes</button>
+                   <button class="btn" id="instructionsB">instrucciones</button>
+                   <button class="btn" id="rankingB">mejores puntajes</button>
                </div>
             </div>
         </div>
         <div class="modal-wrap"></div>
-        <div class="instructions">
+        <div class="modal" id="instructionsM">
             <div class="title">
                 <h3>Instrucciones</h3>
             </div>
@@ -67,7 +70,26 @@
                 </div>
             </div>
             <div class="actions">
-                <button class="btn red" onclick="modal()">cerrar</button>
+                <button class="btn red" id="closeInstructions">cerrar</button>
+            </div>
+        </div>
+        <div class="modal" id="rankingM">
+            <div class="title">
+                <h3>Mejores Puntajes</h3>
+            </div>
+            <div class="text">
+                <table>
+                    <thead>
+                        <th>Posicion</th>
+                        <th>Nombre</th>
+                        <th>Puntaje</th>
+                        <th>Tiempo</th>
+                    </thead>
+                    <tbody id="rankingBody"></tbody>
+                </table>
+            </div>
+            <div class="actions">
+                <button class="btn red" id="closeRanking">cerrar</button>
             </div>
         </div>
         <audio src="assets/sounds/explosion.flac" id="soundExplosion"></audio>
